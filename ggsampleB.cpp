@@ -7,7 +7,7 @@
 #include "nfd.h"
 
 // 形状データ
-static std::string model{ "logo.obj" };
+static std::string model{ "bunny.obj" };
 
 // 光源データ
 static GgSimpleShader::Light light
@@ -15,7 +15,37 @@ static GgSimpleShader::Light light
   { 0.2f, 0.2f, 0.2f, 1.0f }, // 環境光成分
   { 1.0f, 1.0f, 1.0f, 0.0f }, // 拡散反射光成分
   { 1.0f, 1.0f, 1.0f, 0.0f }, // 鏡面反射光成分
-  { 0.5f, 0.5f, 1.0f, 1.0f }  // 光源位置
+  { 3.0f, 4.0f, 5.0f, 1.0f }  // 光源位置
+};
+
+//
+// 背景描画
+// 
+class Rectangle
+{
+  const GLuint vao;
+  const GLuint shader;
+  const GLint imageLoc;
+  const GLint scaleLoc;
+
+public:
+
+  Rectangle()
+    : vao{ [] { GLuint vao; glGenVertexArrays(1, &vao); return vao; } () }
+    , shader{ ggLoadShader("rectangle.vert", "rectangle.frag") }
+    , imageLoc{ glGetUniformLocation(shader, "image") }
+    , scaleLoc{ glGetUniformLocation(shader, "scale") }
+  {
+  }
+
+  void draw(const GLfloat* scale) const
+  {
+    glUseProgram(shader);
+    glUniform1i(imageLoc, 0);
+    glUniform2fv(scaleLoc, 1, scale);
+    glBindVertexArray(vao);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  }
 };
 
 //
@@ -24,7 +54,7 @@ static GgSimpleShader::Light light
 int GgApp::main(int argc, const char* const* argv)
 {
   // ウィンドウを作成する (この行は変更しないでください)
-  Window window{ argc > 1 ? argv[1] : "ggsampleB" };
+  Window window{ argc > 1 ? argv[1] : "ggsampleA" };
 
   // 図形データを読み込む (大きさを正規化する)
   GgSimpleObj object{ model, true };
@@ -33,6 +63,16 @@ int GgApp::main(int argc, const char* const* argv)
   const GgSimpleShader simple{ "simple.vert", "simple.frag" };
   const GLint rotateLoc{ glGetUniformLocation(simple.get(), "rotate") };
   const GLint translateLoc{ glGetUniformLocation(simple.get(), "translate") };
+  const GLint backLoc{ glGetUniformLocation(simple.get(), "back") };
+  const GLint scaleLoc{ glGetUniformLocation(simple.get(), "scale") };
+  const GLint offsetLoc{ glGetUniformLocation(simple.get(), "offset") };
+
+  // 背景テクスチャを読み込む
+  GLsizei backWidth, backHeight;
+  const GLuint back{ ggLoadImage("campus.tga", &backWidth, &backHeight) };
+
+  // 背景描画用のオブジェクトを作成する
+  const Rectangle rect;
 
   // 光源データから光源のバッファオブジェクトを作成する
   GgSimpleShader::LightBuffer lightBuffer{ light };
@@ -72,8 +112,7 @@ int GgApp::main(int argc, const char* const* argv)
   // 背景色を設定する
   glClearColor(0.1f, 0.2f, 0.3f, 0.0f);
 
-  // 隠面消去処理を設定する
-  glEnable(GL_DEPTH_TEST);
+  // 背面ポリゴンを除去する
   glEnable(GL_CULL_FACE);
 
   // ウィンドウが開いている間繰り返す
@@ -140,6 +179,27 @@ int GgApp::main(int argc, const char* const* argv)
     ImGui::Render();
 #endif
 
+    // テクスチャがウィンドウにぴったり収まるサイズを求める
+    GLfloat scale[2];
+    if (window.getWidth() * backHeight > window.getHeight() * backWidth)
+    {
+      scale[0] = 1.0f / window.getWidth();
+      scale[1] = scale[0] * backWidth / backHeight;
+    }
+    else
+    {
+      scale[1] = 1.0f / window.getHeight();
+      scale[0] = scale[1] * backHeight / backWidth;
+    }
+
+    glDisable(GL_DEPTH_TEST);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, back);
+
+    // 背景を描画する
+    rect.draw(scale);
+
+    glEnable(GL_DEPTH_TEST);
     // 投影変換行列を設定する
     const GgMatrix mp{ ggPerspective(0.5f, window.getAspect(), 1.0f, 15.0f) };
 
@@ -150,7 +210,13 @@ int GgApp::main(int argc, const char* const* argv)
     glUniformMatrix4fv(rotateLoc, 1, GL_FALSE, window.getRotationMatrix(0).get());
 
     // オブジェクトの並進を指定する
-    glUniformMatrix4fv(translateLoc, 1, GL_FALSE, window.getTranslationMatrix(1).get());
+    glUniformMatrix4fv(translateLoc, 1, GL_FALSE, window.getScrollMatrix(1).get());
+
+    // テクスチャの拡大率を指定する
+    glUniform2fv(scaleLoc, 1, scale);
+
+    // 背景のテクスチャを指定する
+    glUniform1i(backLoc, 0);
 
     // 図形を描画する
     object.draw();

@@ -15,15 +15,6 @@ layout (std140) uniform Light
   vec4 lpos;                        // 位置
 };
 
-// 材質
-layout (std140) uniform Material
-{
-  vec4 kamb;                        // 環境光の反射係数
-  vec4 kdiff;                       // 拡散反射係数
-  vec4 kspec;                       // 鏡面反射係数
-  float kshi;                       // 輝き係数
-};
-
 // 変換行列
 uniform mat4 mp;                    // 投影変換行列
 uniform mat4 mv;                    // モデルビュー変換行列
@@ -40,33 +31,31 @@ layout (location = 0) in vec4 pv;   // ローカル座標系における頂点�
 layout (location = 1) in vec4 nv;   // ローカル座標系における頂点の法線ベクトル
 
 // ラスタライザに送る頂点属性
-out vec4 idiff;                     // 拡散反射光強度
-out vec4 ispec;                     // 鏡面反射光強度
+out vec3 v;                         // 視点座標系における視線ベクトル
+out vec3 l;                         // 視点座標系における光線ベクトル
+out vec3 h;                         // 視点座標系における中間ベクトル
+out vec3 n;                         // 視点座標系における法線ベクトル
 
 void main(void)
 {
   // 視点座標系における頂点の位置
-  vec4 p = mv * pv;
-
-  // 視点座標系における視線ベクトル
-  vec3 v = -normalize(p.xyz);
+  vec4 p = mv * rotate * pv;
 
   // 視点座標系における光源の位置
   vec4 q = mv * lpos;
 
+  // 視点座標系における視線ベクトル
+  v = -normalize(p.xyz);
+
   // 視点座標系における光線ベクトル
-  vec3 l = normalize((q * p.w - q.w * p).xyz);
+  l = normalize(vec3(q * p.w - q.w * p));
 
   // 視点座標系における中間ベクトル
-  vec3 h = normalize(l + v);
+  h = l + v;
 
   // 視点座標系における法線ベクトル
-  vec3 n = normalize((mn * nv).xyz);
-
-  // 陰影計算
-  idiff = max(dot(n, l), 0.0) * kdiff * ldiff + kamb * lamb;
-  ispec = pow(max(dot(n, h), 0.0), kshi) * kspec * lspec;
+  n = vec3(mn * rotate * nv);
 
   // クリッピング座標系における頂点の位置
-  gl_Position = mp * p;
+  gl_Position = translate * mp * p;
 }

@@ -179,6 +179,8 @@
     <Image Include="gg.ico" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="rectangle.frag" />
+    <None Include="rectangle.vert" />
     <None Include="simple.frag" />
     <None Include="simple.vert" />
   </ItemGroup>
