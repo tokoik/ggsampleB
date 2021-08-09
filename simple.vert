@@ -21,10 +21,7 @@ uniform mat4 mv;                    // モデルビュー変換行列
 uniform mat4 mn;                    // 法線変換行列
 
 // オブジェクトの回転
-uniform mat4 rotate;
-
-// オブジェクトの並進
-uniform mat4 translate;
+uniform mat4 turn;
 
 // 頂点属性
 layout (location = 0) in vec4 pv;   // ローカル座標系における頂点の位置
@@ -39,7 +36,7 @@ out vec3 n;                         // 視点座標系における法線ベク�
 void main(void)
 {
   // 視点座標系における頂点の位置
-  vec4 p = mv * rotate * pv;
+  vec4 p = mv * turn * pv;
 
   // 視点座標系における光源の位置
   vec4 q = mv * lpos;
@@ -54,8 +51,8 @@ void main(void)
   h = l + v;
 
   // 視点座標系における法線ベクトル
-  n = vec3(mn * rotate * nv);
+  n = vec3(mn * turn * nv);
 
   // クリッピング座標系における頂点の位置
-  gl_Position = translate * mp * p;
+  gl_Position = mp * p;
 }

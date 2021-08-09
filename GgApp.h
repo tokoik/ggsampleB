@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 // Dear ImGui を使うなら
-#define GG_USE_IMGUI
+//#define GG_USE_IMGUI
 
 // Oculus Rift を使うなら
 //#define GG_USE_OCULUS_RIFT

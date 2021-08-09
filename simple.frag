@@ -31,10 +31,22 @@ in vec3 h;                          // 視点座標系における中間ベク�
 in vec3 n;                          // 視点座標系における法線ベクトル
 
 // 背景テクスチャのサンプラ
-uniform sampler2D back;
+uniform sampler2D image;
+
+// 背景テクスチャの回転
+uniform mat4 rotate;
 
 // 背景テクスチャのスケール
-uniform vec2 scale;
+uniform float scale;
+
+// 焦点距離
+uniform float focal = -2.0;
+
+// 陰影とテクスチャの混合比
+uniform float alpha = 0.3;
+
+// 角度からテクスチャ座標に変換する係数 (-1/2π, 1/π)
+const vec2 rad2tex = vec2(-0.15915494, 0.31830989);
 
 // フレームバッファに出力するデータ
 layout (location = 0) out vec4 fc;  // フラグメントの色
@@ -47,17 +59,19 @@ void main(void)
   vec3 hh = normalize(h);
   vec3 nn = normalize(n);
 
-  // テクスチャ座標
-  vec3 r = refract(v, n, 1.5);
-  vec2 coord = gl_FragCoord.xy * scale + r.xy / r.z;
+  // 視点からこのフラグメントに向かう視線を求める
+  vec3 ray = mat3(rotate) * vec3(gl_FragCoord.xy * scale * 2.0 - 1.0, focal);
 
-  // テクスチャの色
-  vec4 color = texture(back, coord);
+  // 視線の方向から正距円筒図法のテクスチャ座標を求める
+  vec2 texcoord = atan(ray.xy, vec2(ray.z, length(ray.xz))) * rad2tex + 0.5;
+
+  // テクスチャの色をサンプリングする
+  vec4 color = texture(image, texcoord);
 
   // 陰影計算
-  vec4 idiff = mix(max(dot(nn, ll), 0.0) * kdiff * ldiff + kamb * lamb, color, 0.6);
+  vec4 idiff = max(dot(nn, ll), 0.0) * kdiff * ldiff + kamb * lamb;
   vec4 ispec = pow(max(dot(nn, hh), 0.0), kshi) * kspec * lspec;
 
   // 画素の陰影を求める
-  fc = idiff + ispec;
+  fc = mix(idiff, color, alpha) + ispec;
 }
