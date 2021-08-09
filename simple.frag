@@ -36,11 +36,8 @@ uniform sampler2D image;
 // 背景テクスチャの回転
 uniform mat4 rotate;
 
-// 背景テクスチャのスケール
-uniform float scale;
-
-// 焦点距離
-uniform float focal = -2.0;
+// ウィンドウの中心位置
+uniform vec3 center;
 
 // 陰影とテクスチャの混合比
 uniform float alpha = 0.3;
@@ -60,7 +57,7 @@ void main(void)
   vec3 nn = normalize(n);
 
   // 視点からこのフラグメントに向かう視線を求める
-  vec3 ray = mat3(rotate) * vec3(gl_FragCoord.xy * scale * 2.0 - 1.0, focal);
+  vec3 ray = mat3(rotate) * vec3(gl_FragCoord.xy - center.xy, center.z);
 
   // 視線の方向から正距円筒図法のテクスチャ座標を求める
   vec2 texcoord = atan(ray.xy, vec2(ray.z, length(ray.xz))) * rad2tex + 0.5;
@@ -72,6 +69,6 @@ void main(void)
   vec4 idiff = max(dot(nn, ll), 0.0) * kdiff * ldiff + kamb * lamb;
   vec4 ispec = pow(max(dot(nn, hh), 0.0), kshi) * kspec * lspec;
 
-  // 画素の陰影を求める
+  // 拡散反射光による陰影にテクスチャの色を合成してフラグメントの色とする
   fc = mix(idiff, color, alpha) + ispec;
 }

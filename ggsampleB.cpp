@@ -3,8 +3,11 @@
 //
 #include "GgApp.h"
 
+// 画角
+constexpr GLfloat fovy{ 1.0f };
+
 // 光源データ
-static GgSimpleShader::Light light
+constexpr GgSimpleShader::Light light
 {
   { 0.2f, 0.2f, 0.2f, 1.0f }, // 環境光成分
   { 1.0f, 1.0f, 1.0f, 0.0f }, // 拡散反射光成分
@@ -21,7 +24,7 @@ class Background
   const GLuint shader;
   const GLint imageLoc;
   const GLint rotateLoc;
-  const GLint scaleLoc;
+  const GLint centerLoc;
 
 public:
 
@@ -31,7 +34,7 @@ public:
     , shader{ ggLoadShader("rectangle.vert", "rectangle.frag") }
     , imageLoc{ glGetUniformLocation(shader, "image") }
     , rotateLoc{ glGetUniformLocation(shader, "rotate") }
-    , scaleLoc{ glGetUniformLocation(shader, "scale") }
+    , centerLoc{ glGetUniformLocation(shader, "center") }
   {
   }
 
@@ -39,18 +42,27 @@ public:
   Background(const Background& o) = delete;
 
   // デストラクタ
-  ~Background()
+  virtual ~Background()
   {
     glDeleteVertexArrays(1, &vao);
   }
 
   // 描画
-  void draw(const Window& window, GLfloat scale) const
+  void draw(const Window& window, const GLfloat* center) const
   {
+    // シェーダプログラムを指定する
     glUseProgram(shader);
+
+    // 背景のテクスチャを指定する
     glUniform1i(imageLoc, 0);
+
+    // 背景のテクスチャの回転を指定する
     glUniformMatrix4fv(rotateLoc, 1, GL_FALSE, window.getRotationMatrix(1).get());
-    glUniform1f(scaleLoc, scale);
+
+    // ウィンドウの中心位置を指定する
+    glUniform3fv(centerLoc, 1, center);
+
+    // 図形を描画する
     glBindVertexArray(vao);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
   }
@@ -68,7 +80,7 @@ class Object
   const GLint turnLoc;
   const GLint imageLoc;
   const GLint rotateLoc;
-  const GLint scaleLoc;
+  const GLint centerLoc;
 
 public:
 
@@ -77,11 +89,16 @@ public:
     : obj{ model, true }
     , shader{ "simple.vert", "simple.frag" }
     , lightBuffer{ light }
-    , mv{ ggLookat(0.0f, 0.0f, 5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f) }
+    , mv{ ggLookat(0.0f, 0.0f, 2.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f) }
     , turnLoc{ glGetUniformLocation(shader.get(), "turn") }
     , imageLoc{ glGetUniformLocation(shader.get(), "image") }
     , rotateLoc{ glGetUniformLocation(shader.get(), "rotate") }
-    , scaleLoc{ glGetUniformLocation(shader.get(), "scale") }
+    , centerLoc{ glGetUniformLocation(shader.get(), "center") }
+  {
+  }
+
+  // デストラクタ
+  virtual ~Object()
   {
   }
 
@@ -89,10 +106,10 @@ public:
   Object(const Object& o) = delete;
 
   // 描画
-  void draw(const Window& window, GLfloat scale) const
+  void draw(const Window& window, const GLfloat* center) const
   {
     // 投影変換行列を設定する
-    const GgMatrix mp{ ggPerspective(0.5f, window.getAspect(), 1.0f, 15.0f) };
+    const GgMatrix mp{ ggPerspective(fovy, window.getAspect(), 1.0f, 15.0f) };
 
     // シェーダプログラムを指定する
     shader.use(mp, mv, lightBuffer);
@@ -106,8 +123,8 @@ public:
     // 背景のテクスチャの回転を指定する
     glUniformMatrix4fv(rotateLoc, 1, GL_FALSE, window.getRotationMatrix(1).get());
 
-    // 背景のテクスチャの拡大率を指定する
-    glUniform1f(scaleLoc, scale);
+    // ウィンドウの中心位置を指定する
+    glUniform3fv(centerLoc, 1, center);
 
     // 図形を描画する
     obj.draw();
@@ -129,11 +146,7 @@ int GgApp::main(int argc, const char* const* argv)
   const Object object{ "logo.obj" };
 
   // 背景テクスチャを読み込む
-  GLsizei backWidth, backHeight;
-  const GLuint back{ ggLoadImage("a101.tga", &backWidth, &backHeight) };
-
-  // 背景色を設定する
-  glClearColor(0.1f, 0.2f, 0.3f, 0.0f);
+  const GLuint back{ ggLoadImage("a101.tga") };
 
   // 背面ポリゴンを除去する
   glEnable(GL_CULL_FACE);
@@ -141,27 +154,26 @@ int GgApp::main(int argc, const char* const* argv)
   // ウィンドウが開いている間繰り返す
   while (window)
   {
-    // ウィンドウを消去する
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // スクリーンまでの距離を求める
+    const GLfloat focal{ window.getHeight() / tan(fovy * 0.5f) };
 
-    // テクスチャがウィンドウにぴったり収める拡大率を求める
-    const GLfloat scale
-    {
-      1.0f / (window.getWidth() * backHeight > window.getHeight() * backWidth
-      ? window.getWidth() : window.getHeight())
-    };
+    // ウィンドウの中心位置を求める
+    const GLfloat center[]{ window.getWidth() * 0.5f, window.getHeight() * 0.5f, -focal };
 
-    // 背景テクスチャを読み込む
+    // デプスバッファを消去する
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    // 背景テクスチャを指定する
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, back);
 
     // 背景を描画する
     glDisable(GL_DEPTH_TEST);
-    rect.draw(window, scale);
+    rect.draw(window, center);
 
     // 図形を描画する
     glEnable(GL_DEPTH_TEST);
-    object.draw(window, scale);
+    object.draw(window, center);
 
     // カラーバッファを入れ替えてイベントを取り出す
     window.swapBuffers();
