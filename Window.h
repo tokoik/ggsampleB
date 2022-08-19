@@ -112,6 +112,9 @@ class Window
   // ユーザインタフェースのデータ構造
   struct HumanInterface
   {
+    // 最後にタイプしたキー
+    int lastKey;
+
     // 矢印キー
     std::array<std::array<int, 2>, 4> arrow;
 
@@ -129,7 +132,11 @@ class Window
 
     // コンストラクタ
     HumanInterface()
-      : mouse{}
+      : lastKey{ 0 }
+      , arrow {}
+      , mouse{}
+      , wheel{}
+      , translation{}
     {
       resetTranslation();
     }
@@ -305,9 +312,10 @@ class Window
         break;
 
       default:
-
         break;
       }
+
+      current_if.lastKey = key;
     }
   }
 
@@ -455,8 +463,8 @@ public:
 
   //! \brief コンストラクタ.
   //!   \param title ウィンドウタイトルの文字列.
-  //!   \param width 開くウィンドウの幅.
-  //!   \param height 開くウィンドウの高さ.
+  //!   \param width 開くウィンドウの幅, フルスクリーン時は無視され実際のディスプレイの幅が使われる.
+  //!   \param height 開くウィンドウの高さ, フルスクリーン時は無視され実際のディスプレイの高さが使われる.
   //!   \param fullscreen フルスクリーン表示を行うディスプレイ番号, 0 ならフルスクリーン表示を行わない.
   //!   \param share 共有するコンテキスト, nullptr ならコンテキストを共有しない.
   Window(const std::string& title = "GLFW Window", int width = 640, int height = 480,
@@ -546,7 +554,8 @@ public:
           // Shutdown Platform/Renderer bindings
           ImGui_ImplOpenGL3_Shutdown();
           ImGui_ImplGlfw_Shutdown();
-        });
+        }
+      );
 
       // 実行済みであることを記録する
       firstTime = false;
@@ -646,7 +655,7 @@ public:
   }
 
   //! \brief カラーバッファを入れ替える.
-  void swapBuffers()
+  void swapBuffers() const
   {
 #if defined(IMGUI_VERSION)
     // ImGui の描画データがあればフレームをレンダリングする
@@ -663,16 +672,30 @@ public:
 
   //! \brief ウィンドウの横幅を得る.
   //!   \return ウィンドウの横幅.
-  const GLsizei& getWidth() const
+  GLsizei getWidth() const
   {
     return size[0];
   }
 
   //! \brief ウィンドウの高さを得る.
   //!   \return ウィンドウの高さ.
-  const GLsizei& getHeight() const
+  GLsizei getHeight() const
   {
     return size[1];
+  }
+
+  //! \brief FBO の横幅を得る.
+  //!   \return FBO の横幅.
+  GLsizei getFboWidth() const
+  {
+    return fboSize[0];
+  }
+
+  //! \brief FBO の高さを得る.
+  //!   \return FBO の高さ.
+  GLsizei getFboHeight() const
+  {
+    return fboSize[1];
   }
 
   //! \brief ウィンドウのサイズを得る.
@@ -690,22 +713,37 @@ public:
     size[1] = getHeight();
   }
 
+  //! \brief FBO のサイズを得る.
+  //!   \return FBO の幅と高さを格納した GLsizei 型の 2 要素の配列.
+  const GLsizei* getFboSize() const
+  {
+    return fboSize.data();
+  }
+
+  //! \brief FBO のサイズを得る.
+  //!   \param size FBO の幅と高さを格納した GLsizei 型の 2 要素の配列.
+  void getFboSize(GLsizei* fboSize) const
+  {
+    fboSize[0] = getFboWidth();
+    fboSize[1] = getFboHeight();
+  }
+
   //! \brief ウィンドウのアスペクト比を得る.
   //!   \return ウィンドウの縦横比.
-  const GLfloat& getAspect() const
+  GLfloat getAspect() const
   {
     return aspect;
   }
 
   //! ビューポートをウィンドウ全体に設定する.
-  void restoreViewport()
+  void restoreViewport() const
   {
     glViewport(0, 0, fboSize[0], fboSize[1]);
   }
 
   //! \brief キーが押されているかどうかを判定する.
   //!   \return キーが押されていれば true.
-  bool getKey(int key)
+  bool getKey(int key) const
   {
 #if defined(IMGUI_VERSION)
     // ImGui がキーボードを使うときはキーボードの処理を行わない
@@ -715,20 +753,31 @@ public:
     return glfwGetKey(window, key) != GLFW_RELEASE;
   }
 
-  //! \brief インタフェースを選択する
-  //!   \param no インターフェース番号
+  //! \brief インタフェースを選択する.
+  //!   \param no インターフェース番号.
   void selectInterface(int no)
   {
     assert(static_cast<size_t>(no) < interfaceData.size());
     interfaceNo = no;
   }
 
-  //! \brief マウスの移動速度を設定する
+  //! \brief マウスの移動速度を設定する.
   //!   \param vx x 方向の移動速度.
   //!   \param vy y 方向の移動速度.
   void setVelocity(GLfloat vx, GLfloat vy, GLfloat vz = 0.1f)
   {
     velocity = std::array<GLfloat, 3>{ vx, vy, vz };
+  }
+
+  //!
+  //! \brief 最後にタイプしたキーを得る.
+  //!   \return 最後にタイプしたキーの文字.
+  int getLastKey()
+  {
+    auto& current_if{ interfaceData[interfaceNo] };
+    const int key{ current_if.lastKey };
+    current_if.lastKey = 0;
+    return key;
   }
 
   //! \brief 矢印キーの現在の値を得る.
@@ -1045,7 +1094,7 @@ public:
   }
 
   //! \brief 表示領域をメニューバーの高さだけ減らす.
-  //!   \param メニューバーの高さ
+  //!   \param メニューバーの高さ.
   void setMenubarHeight(float menubarheight)
   {
     // メニューバーより下に描画する
