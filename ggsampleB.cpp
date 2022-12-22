@@ -48,7 +48,7 @@ public:
   }
 
   // 描画
-  void draw(const Window& window, const GLfloat* center) const
+  void draw(const GgApp::Window& window, const GLfloat* center) const
   {
     // シェーダプログラムを指定する
     glUseProgram(shader);
@@ -106,7 +106,7 @@ public:
   Object(const Object& o) = delete;
 
   // 描画
-  void draw(const Window& window, const GLfloat* center) const
+  void draw(const GgApp::Window& window, const GLfloat* center) const
   {
     // 投影変換行列を設定する
     const GgMatrix mp{ ggPerspective(fovy, window.getAspect(), 1.0f, 15.0f) };
