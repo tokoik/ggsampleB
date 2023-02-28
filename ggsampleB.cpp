@@ -155,7 +155,7 @@ int GgApp::main(int argc, const char* const* argv)
   while (window)
   {
     // スクリーンまでの距離を求める
-    const GLfloat focal{ window.getHeight() / tan(fovy * 0.5f) };
+    const GLfloat focal{ window.getHeight() / tanf(fovy * 0.5f) };
 
     // ウィンドウの中心位置を求める
     const GLfloat center[]{ window.getWidth() * 0.5f, window.getHeight() * 0.5f, -focal };
