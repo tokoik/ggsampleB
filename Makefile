@@ -1,8 +1,9 @@
 TARGET	= ggsampleB
+IMGUI	= lib
 SOURCES	= $(wildcard *.cpp)
 HEADERS	= $(wildcard *.h)
 OBJECTS	= $(patsubst %.cpp,%.o,$(SOURCES))
-CXXFLAGS	= --std=c++17 -pthread -g -Wall -DDEBUG -DX11 -DPROJECT_NAME=\"$(TARGET)\" `pkg-config glfw3  --cflags`
+CXXFLAGS	= --std=c++17 -pthread -g -Wall -DDEBUG -DX11 -DPROJECT_NAME=\"$(TARGET)\" `pkg-config glfw3  --cflags` -Iinclude
 LDLIBS	= -ldl `pkg-config glfw3 --libs`
 
 .PHONY: clean
