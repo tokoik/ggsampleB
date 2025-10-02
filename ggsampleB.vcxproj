@@ -159,21 +159,11 @@
     <ClCompile Include="gg.cpp" />
     <ClCompile Include="GgApp.cpp" />
     <ClCompile Include="ggsampleB.cpp" />
-    <ClCompile Include="lib\imgui.cpp" />
-    <ClCompile Include="lib\imgui_draw.cpp" />
-    <ClCompile Include="lib\imgui_impl_glfw.cpp" />
-    <ClCompile Include="lib\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="lib\imgui_tables.cpp" />
-    <ClCompile Include="lib\imgui_widgets.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="gg.h" />
     <ClInclude Include="GgApp.h" />
-    <ClInclude Include="include\imconfig.h" />
-    <ClInclude Include="include\imgui.h" />
-    <ClInclude Include="include\imgui_impl_glfw.h" />
-    <ClInclude Include="include\imgui_impl_opengl3.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
