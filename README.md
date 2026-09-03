@@ -2,10 +2,9 @@
 
 ## 1. 概要
 
-本プログラムは、[ゲームグラフィックス特論](https://tokoik.github.io/gg/)の講義資料 [index.html](https://tokoik.github.io/gg/index.html) に対応する宿題のひな型プログラムです。
+本プログラムは、[ゲームグラフィックス特論](https://tokoik.github.io/gg/)の自由課題 B 用のひな型プログラムです。
 
 - 講義ポータル: [ゲームグラフィックス特論 - 床井研究室](https://tokoik.github.io/gg/)
-- 講義資料: [index.html](https://tokoik.github.io/gg/index.html)
 
 ## 2. 宿題の内容
 
